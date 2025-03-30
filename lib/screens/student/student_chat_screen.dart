@@ -28,7 +28,6 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
   late String _currentMode;
   File? _capturedImage;
   bool _showAssistanceOptions = false;
-  bool _isTyping = false;
   
   @override
   void initState() {
@@ -130,7 +129,6 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
     
     // Show typing indicator
     setState(() {
-      _isTyping = true;
       _messages.add(
         ChatMessage(
           id: 'typing-${DateTime.now().millisecondsSinceEpoch}',
@@ -149,7 +147,6 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
       
       // Remove typing indicator
       setState(() {
-        _isTyping = false;
         _messages.removeWhere((message) => 
           message.type == MessageType.systemMessage && 
           message.content == 'typing'
@@ -379,7 +376,7 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.8),
+                        color: const Color.fromRGBO(255, 255, 255, 0.8),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -647,20 +644,28 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
       width: size,
       height: size * 0.6,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.7),
+        color: const Color.fromRGBO(255, 255, 255, 0.7),
         borderRadius: BorderRadius.circular(size / 2),
       ),
     );
   }
   
   Widget _buildAssistanceButton(String label, IconData icon, VoidCallback onTap) {
+    // Extract color values for const constructor
+    const primaryLightColor = AppColors.primaryLight;
+    
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.primaryLight.withOpacity(0.2),
+          color: Color.fromRGBO(
+            primaryLightColor.r.round(),
+            primaryLightColor.g.round(),
+            primaryLightColor.b.round(),
+            0.2
+          ),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(

@@ -1,7 +1,7 @@
 // lib/services/chat_service.dart
 import 'package:flutter/material.dart';
 import '../models/chat_message.dart';
-import '../models/student.dart';
+//import '../models/student.dart';
 import 'database_service.dart';
 
 class ChatService extends ChangeNotifier {

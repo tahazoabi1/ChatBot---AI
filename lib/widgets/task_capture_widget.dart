@@ -1,4 +1,3 @@
-
 // lib/widgets/task_capture_widget.dart
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -46,9 +45,12 @@ class _TaskCaptureWidgetState extends State<TaskCaptureWidget> {
       setState(() {
         _isProcessing = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('שגיאה בצילום המשימה: $e')),
-      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה בצילום המשימה: $e')),
+        );
+      }
     }
   }
 

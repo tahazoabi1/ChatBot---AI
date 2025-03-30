@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/app_strings.dart';
-import '../../widgets/notification_widget.dart';
+//import '../../widgets/notification_widget.dart';
 import 'student_chat_screen.dart';
 
 class StudentHomeScreen extends StatelessWidget {
