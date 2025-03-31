@@ -1,12 +1,10 @@
 // lib/screens/teacher/teacher_chat_screen.dart
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
-import '../../constants/app_strings.dart';
 import '../../models/chat_message.dart';
 import '../../models/student.dart';
 import '../../widgets/chat_bubble.dart';
 import 'package:provider/provider.dart';
-import '../../services/chat_service.dart';
 import '../../services/database_service.dart';
 
 class TeacherChatScreen extends StatefulWidget {

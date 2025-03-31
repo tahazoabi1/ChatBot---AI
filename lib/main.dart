@@ -92,7 +92,7 @@ class MyApp extends StatelessWidget {
             textDirection: TextDirection.rtl,
             child: MediaQuery(
               // Apply font scaling
-              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+              data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
               child: child!,
             ),
           );

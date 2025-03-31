@@ -1,12 +1,13 @@
 // lib/screens/student/student_chat_screen.dart
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-
+//import 'package:flutter/services.dart';
+import 'dart:io';
 import '../../constants/app_colors.dart';
 import '../../constants/app_strings.dart';
 import '../../models/chat_message.dart';
 import '../../widgets/chat_bubble.dart';
+//import '../../widgets/task_capture_widget.dart';
+import 'package:image_picker/image_picker.dart';
 
 class StudentChatScreen extends StatefulWidget {
   final String initialMode;
@@ -20,19 +21,18 @@ class StudentChatScreen extends StatefulWidget {
   State<StudentChatScreen> createState() => _StudentChatScreenState();
 }
 
-class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindingObserver {
+class _StudentChatScreenState extends State<StudentChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
   bool _isRecording = false;
-  late String _currentMode;
+  String _currentMode = 'practice'; // Default mode
   File? _capturedImage;
   bool _showAssistanceOptions = false;
   
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _currentMode = widget.initialMode;
     
     // Add welcome message
@@ -47,28 +47,13 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
   }
   
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      // Stop recording if app goes to background
-      if (_isRecording) {
-        setState(() {
-          _isRecording = false;
-        });
-      }
-    }
-  }
-  
-  @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
   
   void _addBotMessage(String content) {
-    if (!mounted) return;
-    
     setState(() {
       _messages.add(
         ChatMessage(
@@ -83,8 +68,6 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
   }
   
   void _addUserMessage(String content, {MessageType type = MessageType.text}) {
-    if (!mounted) return;
-    
     setState(() {
       _messages.add(
         ChatMessage(
@@ -100,8 +83,6 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
   }
   
   void _scrollToBottom() {
-    if (!mounted) return;
-    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -125,8 +106,6 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
   }
   
   void _processBotResponse(String userMessage) {
-    if (!mounted) return;
-    
     // Show typing indicator
     setState(() {
       _messages.add(
@@ -143,8 +122,6 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
     
     // Simulate processing delay
     Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      
       // Remove typing indicator
       setState(() {
         _messages.removeWhere((message) => 
@@ -178,14 +155,12 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
       
       // Ask for feedback after bot response
       Future.delayed(const Duration(seconds: 1), () {
-        if (mounted) _showFeedbackDialog();
+        _showFeedbackDialog();
       });
     });
   }
   
   void _handleAssistanceOption(String option) {
-    if (!mounted) return;
-    
     late String userMessage;
     late String botResponse;
     
@@ -202,39 +177,29 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
         userMessage = 'אנא הסבר את המשימה';
         botResponse = 'בשמחה! המשימה מבקשת ממך לבצע את הפעולות הבאות: [כאן יופיע הסבר מפורט של המשימה הספציפית]';
         break;
-      default:
-        return;
     }
     
     _addUserMessage(userMessage);
     
     // Simulate AI processing
     Future.delayed(const Duration(milliseconds: 500), () {
-      if (!mounted) return;
       _addBotMessage(botResponse);
       
       // Ask for feedback
       Future.delayed(const Duration(seconds: 1), () {
-        if (mounted) _showFeedbackDialog();
+        _showFeedbackDialog();
       });
     });
   }
   
   Future<void> _captureTask() async {
-    if (!mounted) return;
-    
     try {
       final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-        preferredCameraDevice: CameraDevice.rear,
-      );
+      final XFile? image = await picker.pickImage(source: ImageSource.camera);
       
-      if (image != null && mounted) {
-        final File imageFile = File(image.path);
+      if (image != null) {
         setState(() {
-          _capturedImage = imageFile;
+          _capturedImage = File(image.path);
         });
         
         // Add task image to chat
@@ -245,15 +210,12 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
         
         // Simulate text extraction
         Future.delayed(const Duration(seconds: 1), () {
-          if (!mounted) return;
           _addBotMessage('אני מעבד את המשימה שצילמת...');
           
           Future.delayed(const Duration(seconds: 2), () {
-            if (!mounted) return;
             _addBotMessage('זיהיתי את המשימה הבאה: \n\nכתוב חיבור בנושא "לאהוב את הטבע שמסביבנו" בהיקף של 30-40 שורות. לאחר מכן ענה על שאלות הבנה הקשורות לנושא.');
             
             Future.delayed(const Duration(seconds: 1), () {
-              if (!mounted) return;
               setState(() {
                 _showAssistanceOptions = true;
               });
@@ -262,22 +224,16 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
         });
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('שגיאה בצילום המשימה: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('שגיאה בצילום המשימה: $e')),
+      );
     }
   }
   
   void _showFeedbackDialog() {
-    // Don't show feedback dialog if it's already showing or screen is not mounted
-    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
-    
     showDialog(
       context: context,
-      barrierDismissible: true,
-      builder: (BuildContext dialogContext) => AlertDialog(
+      builder: (context) => AlertDialog(
         title: const Text('משוב'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -287,18 +243,18 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildFeedbackOption(dialogContext, 1, AppStrings.poor),
-                _buildFeedbackOption(dialogContext, 2, ''),
-                _buildFeedbackOption(dialogContext, 3, AppStrings.average),
-                _buildFeedbackOption(dialogContext, 4, ''),
-                _buildFeedbackOption(dialogContext, 5, AppStrings.excellent),
+                _buildFeedbackOption(context, 1, AppStrings.poor),
+                _buildFeedbackOption(context, 2, ''),
+                _buildFeedbackOption(context, 3, AppStrings.average),
+                _buildFeedbackOption(context, 4, ''),
+                _buildFeedbackOption(context, 5, AppStrings.excellent),
               ],
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
+            onPressed: () => Navigator.pop(context),
             child: const Text('סגור'),
           ),
         ],
@@ -308,7 +264,6 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
   
   Widget _buildFeedbackOption(BuildContext context, int rating, String label) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
           icon: Icon(
@@ -322,8 +277,8 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
           ),
           onPressed: () {
             // Save feedback
-            debugPrint('User rated response: $rating/5');
-            Navigator.of(context).pop();
+            print('User rated response: $rating/5');
+            Navigator.pop(context);
           },
         ),
         if (label.isNotEmpty)
@@ -342,299 +297,270 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
         title: const Text('שיחה עם לרנובוט'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Cloud-like background
-            Container(
-              height: 80,
-              width: double.infinity,
-              color: AppColors.skyBackground,
-              child: Stack(
-                children: [
-                  // Cloud shapes
-                  Positioned(
-                    left: 20,
-                    top: 10,
-                    child: _buildCloud(70),
-                  ),
-                  Positioned(
-                    right: 40,
-                    top: 5,
-                    child: _buildCloud(90),
-                  ),
-                  Positioned(
-                    left: 130,
-                    top: 30,
-                    child: _buildCloud(60),
-                  ),
-                  // Mode indicator
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: const Color.fromRGBO(255, 255, 255, 0.8),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        _currentMode == 'practice' ? AppStrings.practiceMode :
-                        _currentMode == 'test' ? AppStrings.testMode : 'צילום משימה',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
+      body: Column(
+        children: [
+          // Cloud-like background
+          Container(
+            height: 80,
+            width: double.infinity,
+            color: AppColors.skyBackground,
+            child: Stack(
+              children: [
+                // Cloud shapes
+                Positioned(
+                  left: 20,
+                  top: 10,
+                  child: _buildCloud(70),
+                ),
+                Positioned(
+                  right: 40,
+                  top: 5,
+                  child: _buildCloud(90),
+                ),
+                Positioned(
+                  left: 130,
+                  top: 30,
+                  child: _buildCloud(60),
+                ),
+                // Mode indicator
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _currentMode == 'practice' ? AppStrings.practiceMode :
+                      _currentMode == 'test' ? AppStrings.testMode : 'צילום משימה',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-            
-            // Chat Messages
-            Expanded(
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      AppColors.skyBackground,
-                      AppColors.background,
-                    ],
-                  ),
                 ),
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(15),
-                  itemCount: _messages.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    final message = _messages[index];
-                    
-                    // Typing indicator
-                    if (message.type == MessageType.systemMessage && 
-                        message.content == 'typing') {
-                      return Align(
-                        alignment: Alignment.centerRight,
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 15, bottom: 15),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.botBubble,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const SizedBox(
-                              width: 50,
-                              child: Center(
-                                child: Text('...'),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                    
-                    // Task capture message
-                    if (message.type == MessageType.taskCapture) {
-                      return Align(
-                        alignment: Alignment.centerLeft,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ChatBubble(
-                              message: message,
-                              showAvatar: index == 0 || 
-                                _messages[index - 1].sender != message.sender,
-                            ),
-                            if (_capturedImage != null) ...[
-                              const SizedBox(height: 5),
-                              Container(
-                                margin: const EdgeInsets.only(left: 50),
-                                height: 150,
-                                width: 200,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppColors.primary),
-                                  image: DecorationImage(
-                                    image: FileImage(_capturedImage!),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      );
-                    }
-                    
-                    // Regular chat message
-                    return ChatBubble(
-                      key: ValueKey(message.id),
-                      message: message,
-                      showAvatar: index == 0 || 
-                        _messages[index - 1].sender != message.sender,
-                    );
-                  },
-                ),
-              ),
+              ],
             ),
-            
-            // Assistance options (Breakdown, Demonstrate, Explain)
-            if (_showAssistanceOptions)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                color: Colors.white,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildAssistanceButton(
-                      'פירוק לשלבים',
-                      Icons.format_list_numbered,
-                      () => _handleAssistanceOption('breakdown'),
-                    ),
-                    _buildAssistanceButton(
-                      'הדגמה',
-                      Icons.play_circle_outline,
-                      () => _handleAssistanceOption('demonstrate'),
-                    ),
-                    _buildAssistanceButton(
-                      'הסבר',
-                      Icons.lightbulb_outline,
-                      () => _handleAssistanceOption('explain'),
-                    ),
+          ),
+          
+          // Chat Messages
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.skyBackground,
+                    AppColors.background,
                   ],
                 ),
               ),
-            
-            // Message Input
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              color: Colors.white,
-              child: Row(
-                children: [
-                  // Navigation button (back)
-                  IconButton(
-                    icon: const Icon(Icons.keyboard_arrow_left),
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    color: AppColors.primary,
-                  ),
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(15),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final message = _messages[index];
                   
-                  // Text input
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 15),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: TextField(
-                        controller: _messageController,
-                        textDirection: TextDirection.rtl,
-                        decoration: const InputDecoration(
-                          hintText: AppStrings.enterQuestion,
-                          hintTextDirection: TextDirection.rtl,
-                          border: InputBorder.none,
+                  // Typing indicator
+                  if (message.type == MessageType.systemMessage && 
+                      message.content == 'typing') {
+                    return Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 15, bottom: 15),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.botBubble,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const SizedBox(
+                            width: 50,
+                            child: Center(
+                              child: Text('...'),
+                            ),
+                          ),
                         ),
-                        onSubmitted: (_) => _sendMessage(),
-                        textInputAction: TextInputAction.send,
-                        keyboardType: TextInputType.text,
-                        enableSuggestions: true,
                       ),
-                    ),
-                  ),
+                    );
+                  }
                   
-                  // Send button
-                  IconButton(
-                    icon: const Icon(Icons.send, size: 22),
-                    onPressed: _sendMessage,
-                    color: AppColors.primary,
-                  ),
+                  // Task capture message
+                  if (message.type == MessageType.taskCapture) {
+                    return Align(
+                      alignment: Alignment.centerLeft,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ChatBubble(
+                            message: message,
+                            showAvatar: index == 0 || 
+                              _messages[index - 1].sender != message.sender,
+                          ),
+                          if (_capturedImage != null) ...[
+                            const SizedBox(height: 5),
+                            Container(
+                              margin: const EdgeInsets.only(left: 50),
+                              height: 150,
+                              width: 200,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.primary),
+                                image: DecorationImage(
+                                  image: FileImage(_capturedImage!),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }
                   
-                  // Emoji button
-                  IconButton(
-                    icon: const Icon(Icons.sentiment_satisfied_alt),
-                    onPressed: () {
-                      // Show emoji picker or reaction options
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('תכונת אימוג׳י תהיה זמינה בקרוב'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    },
-                    color: AppColors.primary,
-                  ),
-                ],
+                  // Regular chat message
+                  return ChatBubble(
+                    message: message,
+                    showAvatar: index == 0 || 
+                      _messages[index - 1].sender != message.sender,
+                  );
+                },
               ),
             ),
-            
-            // Bottom actions
+          ),
+          
+          // Assistance options (Breakdown, Demonstrate, Explain)
+          if (_showAssistanceOptions)
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 5),
-              color: AppColors.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              color: Colors.white,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // Voice record button
-                  IconButton(
-                    icon: Icon(
-                      _isRecording ? Icons.stop : Icons.mic,
-                      color: Colors.white,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _isRecording = !_isRecording;
-                      });
-                      
-                      if (_isRecording) {
-                        // Show recording indicator
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('מקליט...'),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                      } else {
-                        // Simulate voice recognition
-                        _addUserMessage('הודעה קולית');
-                        _processBotResponse('האם אתה יכול לעזור לי עם המשימה?');
-                      }
-                    },
+                  _buildAssistanceButton(
+                    'פירוק לשלבים',
+                    Icons.format_list_numbered,
+                    () => _handleAssistanceOption('breakdown'),
                   ),
-                  
-                  // Camera button
-                  IconButton(
-                    icon: const Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                    ),
-                    onPressed: _captureTask,
+                  _buildAssistanceButton(
+                    'הדגמה',
+                    Icons.play_circle_outline,
+                    () => _handleAssistanceOption('demonstrate'),
                   ),
-                  
-                  // Call teacher button
-                  IconButton(
-                    icon: const Icon(
-                      Icons.school,
-                      color: Colors.white,
-                    ),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('הודעה נשלחה למורה'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    },
+                  _buildAssistanceButton(
+                    'הסבר',
+                    Icons.lightbulb_outline,
+                    () => _handleAssistanceOption('explain'),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          
+          // Message Input
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            color: Colors.white,
+            child: Row(
+              children: [
+                // Navigation button (back)
+                IconButton(
+                  icon: const Icon(Icons.keyboard_arrow_left),
+                  onPressed: () {},
+                  color: AppColors.primary,
+                ),
+                
+                // Text input
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 15),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: TextField(
+                      controller: _messageController,
+                      textDirection: TextDirection.rtl,
+                      decoration: const InputDecoration(
+                        hintText: AppStrings.enterQuestion,
+                        hintTextDirection: TextDirection.rtl,
+                        border: InputBorder.none,
+                      ),
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                  ),
+                ),
+                
+                // Send button
+                IconButton(
+                  icon: const Icon(Icons.sentiment_satisfied_alt),
+                  onPressed: () {},
+                  color: AppColors.primary,
+                ),
+              ],
+            ),
+          ),
+          
+          // Bottom actions
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            color: AppColors.primary,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                // Voice record button
+                IconButton(
+                  icon: Icon(
+                    _isRecording ? Icons.stop : Icons.mic,
+                    color: Colors.white,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isRecording = !_isRecording;
+                    });
+                    
+                    if (!_isRecording) {
+                      // Simulate voice recognition
+                      _addUserMessage('הודעה קולית');
+                      _processBotResponse('האם אתה יכול לעזור לי עם המשימה?');
+                    }
+                  },
+                ),
+                
+                // Camera button
+                IconButton(
+                  icon: const Icon(
+                    Icons.camera_alt,
+                    color: Colors.white,
+                  ),
+                  onPressed: _captureTask,
+                ),
+                
+                // Call teacher button
+                IconButton(
+                  icon: const Icon(
+                    Icons.school,
+                    color: Colors.white,
+                  ),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('הודעה נשלחה למורה'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -644,28 +570,20 @@ class _StudentChatScreenState extends State<StudentChatScreen> with WidgetsBindi
       width: size,
       height: size * 0.6,
       decoration: BoxDecoration(
-        color: const Color.fromRGBO(255, 255, 255, 0.7),
+        color: Colors.white.withOpacity(0.7),
         borderRadius: BorderRadius.circular(size / 2),
       ),
     );
   }
   
   Widget _buildAssistanceButton(String label, IconData icon, VoidCallback onTap) {
-    // Extract color values for const constructor
-    const primaryLightColor = AppColors.primaryLight;
-    
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: Color.fromRGBO(
-            primaryLightColor.r.round(),
-            primaryLightColor.g.round(),
-            primaryLightColor.b.round(),
-            0.2
-          ),
+          color: AppColors.primaryLight.withOpacity(0.2),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
