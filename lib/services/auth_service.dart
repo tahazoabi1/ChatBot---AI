@@ -8,110 +8,159 @@ class AuthService extends ChangeNotifier {
   String _userId = '';
   String _username = '';
   
-  // Firebase instance
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  // Firebase instance (nullable to handle initialization issues)
+  FirebaseAuth? _auth;
   
   // Getters for auth state
   bool get isLoggedIn => _isLoggedIn;
   bool get isTeacher => _isTeacher;
   String get userId => _userId;
   String get username => _username;
-  User? get currentUser => _auth.currentUser;
+  User? get currentUser => _auth?.currentUser;
   
   // Constructor to check if user is already logged in
   AuthService() {
-    _checkCurrentUser();
+    _initializeFirebase();
+  }
+  
+  // Initialize Firebase safely
+  void _initializeFirebase() {
+    try {
+      _auth = FirebaseAuth.instance;
+      _checkCurrentUser();
+    } catch (e) {
+      print('Firebase not initialized, using local auth only: $e');
+      _auth = null;
+    }
   }
   
   // Check if user is already logged in on app start
   void _checkCurrentUser() {
-    final user = _auth.currentUser;
-    if (user != null) {
-      _isLoggedIn = true;
-      _userId = user.uid;
-      _username = user.displayName ?? user.email ?? '';
-      notifyListeners();
+    if (_auth == null) return;
+    
+    try {
+      final user = _auth!.currentUser;
+      if (user != null) {
+        _isLoggedIn = true;
+        _userId = user.uid;
+        _username = user.displayName ?? user.email ?? '';
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error checking current user: $e');
     }
   }
   
+  // Hardcoded users for testing
+  final Map<String, Map<String, dynamic>> _testUsers = {
+    // Teachers
+    'NofarA': {'password': 'teacher123', 'isTeacher': true, 'name': 'המורה עדי'},
+    'adi': {'password': '123456', 'isTeacher': true, 'name': 'המורה עדי'},
+    
+    // Students
+    'student': {'password': 'student123', 'isTeacher': false, 'name': 'תלמיד בדיקה'},
+    'chen': {'password': '123456', 'isTeacher': false, 'name': 'חן לוי'},
+    'noa': {'password': '123456', 'isTeacher': false, 'name': 'נועה כהן'},
+  };
+
   // Login with email and password
   Future<void> login(String username, String password, bool isTeacher) async {
     try {
-      // For demo purposes or if Firebase isn't configured yet,
-      // we can use a mock login
       if (username.isEmpty || password.isEmpty) {
         throw Exception('שם משתמש וסיסמה נדרשים');
       }
       
-      // Option 1: Use Firebase Auth
-      try {
-        // Try to extract email from username if it's not an email
-        final email = username.contains('@') ? username : '$username@example.com';
-        
-        final userCredential = await _auth.signInWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-        
-        final user = userCredential.user;
-        if (user != null) {
+      // Check against hardcoded test users first
+      if (_testUsers.containsKey(username.toLowerCase())) {
+        final user = _testUsers[username.toLowerCase()]!;
+        if (user['password'] == password && user['isTeacher'] == isTeacher) {
+          await Future.delayed(const Duration(milliseconds: 500)); // Simulate network delay
+          
           _isLoggedIn = true;
-          _isTeacher = isTeacher; // In a real app, this would be determined by user role
-          _userId = user.uid;
-          _username = user.displayName ?? username;
+          _isTeacher = isTeacher;
+          _userId = isTeacher ? 'teacher_${username}' : 'student_${username}';
+          _username = user['name'];
           notifyListeners();
+          return;
         } else {
-          throw Exception('התחברות נכשלה');
+          throw Exception('שם משתמש או סיסמה שגויים');
         }
-      } catch (e) {
-        // Option 2: If Firebase fails or not configured, use mock login for demo
-        await Future.delayed(const Duration(seconds: 1)); // Simulate network request
-        
-        _isLoggedIn = true;
-        _isTeacher = isTeacher;
-        _userId = isTeacher ? 'teacher_1' : 'student_1';
-        _username = username;
-        notifyListeners();
+      }
+      
+      // If not a test user, try Firebase Auth (only if available)
+      if (_auth != null) {
+        try {
+          final email = username.contains('@') ? username : '$username@example.com';
+          
+          final userCredential = await _auth!.signInWithEmailAndPassword(
+            email: email,
+            password: password,
+          );
+          
+          final user = userCredential.user;
+          if (user != null) {
+            _isLoggedIn = true;
+            _isTeacher = isTeacher;
+            _userId = user.uid;
+            _username = user.displayName ?? username;
+            notifyListeners();
+            return;
+          } else {
+            throw Exception('התחברות נכשלה');
+          }
+        } catch (e) {
+          // If Firebase also fails, show error
+          throw Exception('שם משתמש או סיסמה שגויים');
+        }
+      } else {
+        // No Firebase available and not a test user
+        throw Exception('שם משתמש או סיסמה שגויים');
       }
     } catch (e) {
-      throw Exception('שגיאת התחברות: ${e.toString()}');
+      throw Exception(e.toString());
     }
   }
   
   // Register a new user
   Future<void> register(String username, String email, String password, bool isTeacher) async {
     try {
-      // Option 1: Use Firebase Auth
-      try {
-        final userCredential = await _auth.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-        
-        // Update user display name
-        await userCredential.user?.updateDisplayName(username);
-        
-        // Set user role (teacher or student) in a custom claim or database
-        // In a real app, you'd use Cloud Functions or your backend to set custom claims
-        
-        // For demo, we just use local state
-        _isTeacher = isTeacher;
-        
-        // For a real app, you'd create a user profile in Firestore
-        // await _firestore.collection('users').doc(userCredential.user?.uid).set({
-        //   'username': username,
-        //   'email': email,
-        //   'isTeacher': isTeacher,
-        //   'createdAt': FieldValue.serverTimestamp(),
-        // });
-        
-      } catch (e) {
-        // Option 2: If Firebase fails or not configured, use mock registration for demo
-        await Future.delayed(const Duration(seconds: 1)); // Simulate network request
-        
-        // In a real app, you would save user details to a database
-        // For demo purposes, we just log that registration was successful
-        print('User registered: $username, $email, isTeacher: $isTeacher');
+      // Option 1: Use Firebase Auth (only if available)
+      if (_auth != null) {
+        try {
+          final userCredential = await _auth!.createUserWithEmailAndPassword(
+            email: email,
+            password: password,
+          );
+          
+          // Update user display name
+          await userCredential.user?.updateDisplayName(username);
+          
+          // Set user role (teacher or student) in a custom claim or database
+          // In a real app, you'd use Cloud Functions or your backend to set custom claims
+          
+          // For demo, we just use local state
+          _isTeacher = isTeacher;
+          
+          // For a real app, you'd create a user profile in Firestore
+          // await _firestore.collection('users').doc(userCredential.user?.uid).set({
+          //   'username': username,
+          //   'email': email,
+          //   'isTeacher': isTeacher,
+          //   'createdAt': FieldValue.serverTimestamp(),
+          // });
+          
+        } catch (e) {
+          // Option 2: If Firebase fails or not configured, use mock registration for demo
+          await Future.delayed(const Duration(seconds: 1)); // Simulate network request
+          
+          // In a real app, you would save user details to a database
+          // For demo purposes, we just log that registration was successful
+          print('User registered: $username, $email, isTeacher: $isTeacher');
+        }
+      } else {
+        // No Firebase available, use mock registration
+        await Future.delayed(const Duration(seconds: 1));
+        print('User registered (local): $username, $email, isTeacher: $isTeacher');
       }
     } catch (e) {
       throw Exception('שגיאת הרשמה: ${e.toString()}');
@@ -121,7 +170,9 @@ class AuthService extends ChangeNotifier {
   // Logout
   Future<void> logout() async {
     try {
-      await _auth.signOut();
+      if (_auth != null) {
+        await _auth!.signOut();
+      }
     } catch (e) {
       // Handle any Firebase logout errors
       print('Firebase logout error: $e');
@@ -138,7 +189,11 @@ class AuthService extends ChangeNotifier {
   // Password reset
   Future<void> resetPassword(String email) async {
     try {
-      await _auth.sendPasswordResetEmail(email: email);
+      if (_auth != null) {
+        await _auth!.sendPasswordResetEmail(email: email);
+      } else {
+        throw Exception('שירות האימות אינו זמין');
+      }
     } catch (e) {
       throw Exception('שגיאה בשחזור סיסמה: ${e.toString()}');
     }
@@ -147,13 +202,15 @@ class AuthService extends ChangeNotifier {
   // Update user profile
   Future<void> updateProfile({String? displayName, String? photoURL}) async {
     try {
-      final user = _auth.currentUser;
-      if (user != null) {
-        await user.updateDisplayName(displayName);
-        await user.updatePhotoURL(photoURL);
-        
-        _username = user.displayName ?? _username;
-        notifyListeners();
+      if (_auth != null) {
+        final user = _auth!.currentUser;
+        if (user != null) {
+          await user.updateDisplayName(displayName);
+          await user.updatePhotoURL(photoURL);
+          
+          _username = user.displayName ?? _username;
+          notifyListeners();
+        }
       }
     } catch (e) {
       throw Exception('שגיאה בעדכון פרופיל: ${e.toString()}');

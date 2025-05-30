@@ -25,24 +25,41 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    // Use addPostFrameCallback to ensure context is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
   }
 
   Future<void> _loadData() async {
     // Simulate data loading
     await Future.delayed(const Duration(milliseconds: 800));
     
-    // Get data from service
-    final databaseService = Provider.of<DatabaseService>(context, listen: false);
-    List<Student> allStudents = databaseService.getAllStudents();
-    
-    // Sort by most recent activity (mock for now)
-    allStudents.sort((a, b) => b.grade.compareTo(a.grade));
-    
-    setState(() {
-      _recentStudents = allStudents.take(3).toList();
-      _isLoading = false;
-    });
+    // Safely get data from service with null check
+    if (mounted) {
+      try {
+        final databaseService = Provider.of<DatabaseService>(context, listen: false);
+        List<Student> allStudents = databaseService.getAllStudents();
+        
+        // Sort by most recent activity (mock for now)
+        allStudents.sort((a, b) => b.grade.compareTo(a.grade));
+        
+        if (mounted) {
+          setState(() {
+            _recentStudents = allStudents.take(3).toList();
+            _isLoading = false;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error loading data: $e');
+        if (mounted) {
+          setState(() {
+            _recentStudents = [];
+            _isLoading = false;
+          });
+        }
+      }
+    }
   }
 
   @override
