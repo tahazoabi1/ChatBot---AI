@@ -11,6 +11,9 @@ import 'services/auth_service.dart';
 import 'services/chat_service.dart';
 import 'services/database_service.dart';
 import 'utils/router.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 // Global SharedPreferences instance
 late SharedPreferences prefs;
@@ -18,55 +21,38 @@ late SharedPreferences prefs;
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
-  
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   // Load SharedPreferences
   prefs = await SharedPreferences.getInstance();
-  
+
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  
-  // Initialize Firebase with error handling
-  bool firebaseInitialized = false;
-  try {
-    await Firebase.initializeApp();
-    firebaseInitialized = true;
-    debugPrint('Firebase initialized successfully');
-  } catch (e) {
-    debugPrint('Failed to initialize Firebase: $e');
-    debugPrint('App will run without Firebase for demo purposes');
-  }
-  
+
   // Run the app with error zone handling
-  runApp(MyApp(firebaseInitialized: firebaseInitialized));
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final bool firebaseInitialized;
-  
-  const MyApp({
-    Key? key,
-    required this.firebaseInitialized,
-  }) : super(key: key);
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         // Core services
-        ChangeNotifierProvider(create: (_) => AuthService()),
+        Provider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => ChatService()),
         ChangeNotifierProvider(create: (_) => DatabaseService()),
-        
-        // Value providers for app state
-        Provider.value(value: firebaseInitialized),
       ],
       child: MaterialApp(
         title: 'LearnoBot',
         debugShowCheckedModeBanner: false,
-        
+
         // Localization setup
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
@@ -78,13 +64,13 @@ class MyApp extends StatelessWidget {
           Locale('en', 'US'), // English
         ],
         locale: const Locale('he', 'IL'), // Default to Hebrew
-        
+
         // Theme configuration
         theme: _buildTheme(),
-        
+
         // Use onGenerateRoute for named routes with parameters
         onGenerateRoute: AppRouter.generateRoute,
-        
+
         // Ensure RTL for Hebrew
         builder: (context, child) {
           // Apply RTL text direction
@@ -92,25 +78,26 @@ class MyApp extends StatelessWidget {
             textDirection: TextDirection.rtl,
             child: MediaQuery(
               // Apply font scaling
-              data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(1.0)),
               child: child!,
             ),
           );
         },
-        
+
         // Start with splash screen
         home: const SplashScreen(),
       ),
     );
   }
-  
+
   // Build the app theme
   ThemeData _buildTheme() {
     return ThemeData(
       // Colors
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.background,
-      
+
       // Color scheme
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
@@ -118,29 +105,39 @@ class MyApp extends StatelessWidget {
         secondary: AppColors.primaryLight,
         background: AppColors.background,
       ),
-      
+
       // Fonts
       fontFamily: 'Heebo', // Hebrew-friendly font
-      
+
       // Text themes
       textTheme: const TextTheme(
-        displayLarge: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold),
-        displayMedium: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold),
-        displaySmall: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold),
-        headlineLarge: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold),
-        headlineMedium: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold),
-        headlineSmall: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600),
-        titleLarge: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600),
-        titleMedium: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600),
-        titleSmall: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w500),
+        displayLarge:
+            TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold),
+        displayMedium:
+            TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold),
+        displaySmall:
+            TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold),
+        headlineLarge:
+            TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold),
+        headlineMedium:
+            TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold),
+        headlineSmall:
+            TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600),
+        titleLarge:
+            TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600),
+        titleMedium:
+            TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600),
+        titleSmall:
+            TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w500),
         bodyLarge: TextStyle(color: AppColors.textDark),
         bodyMedium: TextStyle(color: AppColors.textDark),
         bodySmall: TextStyle(color: AppColors.textLight),
-        labelLarge: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w500),
+        labelLarge:
+            TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w500),
         labelMedium: TextStyle(color: AppColors.textDark),
         labelSmall: TextStyle(color: AppColors.textLight),
       ),
-      
+
       // AppBar theme
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.primary,
@@ -153,7 +150,7 @@ class MyApp extends StatelessWidget {
           fontWeight: FontWeight.bold,
         ),
       ),
-      
+
       // Elevated Button theme
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -169,7 +166,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      
+
       // Outlined Button theme
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
@@ -185,7 +182,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      
+
       // Text Button theme
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -196,20 +193,21 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      
+
       // Input decoration theme
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         filled: true,
         fillColor: Colors.white,
         hintStyle: TextStyle(color: Colors.grey.shade400),
         prefixIconColor: AppColors.primary,
         suffixIconColor: AppColors.primary,
       ),
-      
+
       // Card theme
       cardTheme: CardTheme(
         elevation: 2,
@@ -218,13 +216,13 @@ class MyApp extends StatelessWidget {
         ),
         color: Colors.white,
       ),
-      
+
       // Progress indicator theme
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: AppColors.primary,
         circularTrackColor: AppColors.primaryLight.withOpacity(0.2),
       ),
-      
+
       // Chip theme
       chipTheme: ChipThemeData(
         backgroundColor: Colors.grey.shade200,
@@ -236,14 +234,14 @@ class MyApp extends StatelessWidget {
           borderRadius: BorderRadius.circular(15),
         ),
       ),
-      
+
       // Divider theme
       dividerTheme: DividerThemeData(
         color: Colors.grey.shade300,
         thickness: 1,
         space: 24,
       ),
-      
+
       // Dialog theme
       dialogTheme: DialogTheme(
         shape: RoundedRectangleBorder(
@@ -261,7 +259,7 @@ class MyApp extends StatelessWidget {
           color: Colors.grey.shade700,
         ),
       ),
-      
+
       // Bottom sheet theme
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: Colors.white,
@@ -271,7 +269,7 @@ class MyApp extends StatelessWidget {
         ),
         modalElevation: 5,
       ),
-      
+
       // Icon theme
       iconTheme: IconThemeData(
         color: Colors.grey.shade700,
@@ -281,7 +279,7 @@ class MyApp extends StatelessWidget {
         color: Colors.white,
         size: 24,
       ),
-      
+
       // Bottom navigation bar theme
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: Colors.white,
@@ -291,7 +289,7 @@ class MyApp extends StatelessWidget {
         elevation: 8,
         showUnselectedLabels: true,
       ),
-      
+
       // Slider theme
       sliderTheme: SliderThemeData(
         activeTrackColor: AppColors.primary,
@@ -301,7 +299,7 @@ class MyApp extends StatelessWidget {
         valueIndicatorColor: AppColors.primary,
         valueIndicatorTextStyle: const TextStyle(color: Colors.white),
       ),
-      
+
       // Switch theme
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
@@ -317,7 +315,7 @@ class MyApp extends StatelessWidget {
           return Colors.grey.shade300;
         }),
       ),
-      
+
       // Material 3 support
       useMaterial3: true,
     );
@@ -327,7 +325,7 @@ class MyApp extends StatelessWidget {
 // Add a widget to ensure app is using the latest fonts and styles
 class AppInit extends StatelessWidget {
   final Widget child;
-  
+
   const AppInit({
     Key? key,
     required this.child,
@@ -343,34 +341,35 @@ class AppInit extends StatelessWidget {
 // Helper class to store app-wide settings
 class AppSettings {
   static bool get isFirstRun => prefs.getBool('firstRun') ?? true;
-  
+
   static setFirstRunComplete() {
     prefs.setBool('firstRun', false);
   }
-  
+
   static String get language => prefs.getString('language') ?? 'he';
-  
+
   static setLanguage(String languageCode) {
     prefs.setString('language', languageCode);
   }
-  
+
   static bool get darkModeEnabled => prefs.getBool('darkMode') ?? false;
-  
+
   static setDarkMode(bool enabled) {
     prefs.setBool('darkMode', enabled);
   }
-  
-  static int get notificationBadgeCount => prefs.getInt('notificationCount') ?? 0;
-  
+
+  static int get notificationBadgeCount =>
+      prefs.getInt('notificationCount') ?? 0;
+
   static setNotificationBadgeCount(int count) {
     prefs.setInt('notificationCount', count);
   }
-  
+
   static void incrementNotificationCount() {
     final currentCount = notificationBadgeCount;
     setNotificationBadgeCount(currentCount + 1);
   }
-  
+
   static void resetNotificationCount() {
     setNotificationBadgeCount(0);
   }

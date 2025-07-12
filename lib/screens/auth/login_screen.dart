@@ -1,29 +1,28 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/app_strings.dart';
-import '../../services/auth_service.dart'; // Fixed path
+import '../../services/auth_service.dart';
 import '../teacher/teacher_panel_screen.dart';
 import '../student/student_home_screen.dart';
 import 'package:provider/provider.dart';
-
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
   @override
-  State<LoginScreen> createState() => LoginScreenState(); // Matches class name below
+  State<LoginScreen> createState() => LoginScreenState();
 }
 
 class LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isTeacher = true; // Default to teacher login
   bool _isLoading = false;
-  
+
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -33,29 +32,37 @@ class LoginScreenState extends State<LoginScreen> {
       setState(() {
         _isLoading = true;
       });
-      
+
       try {
-        // In a real app, use your auth service to handle login
         final authService = Provider.of<AuthService>(context, listen: false);
-        await authService.login(
-          _usernameController.text,
-          _passwordController.text,
-          _isTeacher,
+        final username = await authService.loginAndCheckRole(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          role: _isTeacher ? 'Teacher' : 'Student',
         );
-        
-        // Navigate to the appropriate screen based on user type
-        if (_isTeacher) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const TeacherPanelScreen(),
-            ),
-          );
+
+        if (username != null) {
+          // Navigate to the appropriate screen based on user type
+          if (_isTeacher) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const TeacherPanelScreen(),
+              ),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const StudentHomeScreen(),
+              ),
+            );
+          }
         } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const StudentHomeScreen(),
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('פרטי התחברות שגויים או תפקיד לא תואם'),
+              backgroundColor: Colors.red,
             ),
           );
         }
@@ -113,7 +120,7 @@ class LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    
+
                     // User type selector
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -130,9 +137,8 @@ class LoginScreenState extends State<LoginScreen> {
                               backgroundColor: _isTeacher
                                   ? AppColors.primary
                                   : Colors.grey.shade300,
-                              foregroundColor: _isTeacher
-                                  ? Colors.white
-                                  : Colors.black,
+                              foregroundColor:
+                                  _isTeacher ? Colors.white : Colors.black,
                             ),
                             child: const Text(AppStrings.teacherLogin),
                           ),
@@ -150,9 +156,8 @@ class LoginScreenState extends State<LoginScreen> {
                               backgroundColor: !_isTeacher
                                   ? AppColors.primary
                                   : Colors.grey.shade300,
-                              foregroundColor: !_isTeacher
-                                  ? Colors.white
-                                  : Colors.black,
+                              foregroundColor:
+                                  !_isTeacher ? Colors.white : Colors.black,
                             ),
                             child: const Text(AppStrings.studentLogin),
                           ),
@@ -160,26 +165,29 @@ class LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    
-                    // Username Field
+
+                    // Email Field
                     TextFormField(
-                      controller: _usernameController,
+                      controller: _emailController,
                       decoration: const InputDecoration(
-                        labelText: AppStrings.enterUsername,
+                        labelText: 'אימייל',
                         border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person),
+                        prefixIcon: Icon(Icons.email),
                       ),
                       textAlign: TextAlign.right,
                       textDirection: TextDirection.rtl,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'אנא הכנס שם משתמש';
+                          return 'אנא הכנס אימייל';
+                        }
+                        if (!value.contains('@')) {
+                          return 'אימייל לא תקין';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 15),
-                    
+
                     // Password Field
                     TextFormField(
                       controller: _passwordController,
@@ -195,18 +203,22 @@ class LoginScreenState extends State<LoginScreen> {
                         if (value == null || value.isEmpty) {
                           return 'אנא הכנס סיסמה';
                         }
+                        if (value.length < 6) {
+                          return 'הסיסמה חייבת להיות לפחות 6 תווים';
+                        }
                         return null;
                       },
                     ),
                     const SizedBox(height: 25),
-                    
+
                     // Login Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _login,
                         child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
+                            ? const CircularProgressIndicator(
+                                color: Colors.white)
                             : const Text(
                                 AppStrings.loginButtonText,
                                 style: TextStyle(fontSize: 16),

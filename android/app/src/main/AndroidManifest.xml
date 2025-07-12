@@ -1,6 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.learnobot.learnobotapp"> // Changed to follow standard naming conventions
-
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:label="learnobot"
         android:name="${applicationName}"

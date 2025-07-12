@@ -1,4 +1,3 @@
-// lib/screens/auth/registration_screen.dart
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/app_strings.dart';
@@ -21,7 +20,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _isTeacher = true; // Default to teacher registration
   bool _isLoading = false;
-  
+
   @override
   void dispose() {
     _usernameController.dispose();
@@ -42,32 +41,30 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         );
         return;
       }
-      
+
       setState(() {
         _isLoading = true;
       });
-      
+
       try {
-        // In a real app, use your auth service to handle registration
         final authService = Provider.of<AuthService>(context, listen: false);
-        await authService.register(
-          _usernameController.text,
-          _emailController.text,
-          _passwordController.text,
-          _isTeacher,
+
+        await authService.registerWithEmail(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          username: _usernameController.text.trim(),
+          role: _isTeacher ? 'Teacher' : 'Student',
         );
-        
+
         if (!mounted) return;
-        
-        // Show success message
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('ההרשמה הושלמה בהצלחה! ניתן להתחבר כעת'),
             backgroundColor: Colors.green,
           ),
         );
-        
-        // Navigate to login screen
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -75,9 +72,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ),
         );
       } catch (e) {
-        // Handle registration errors
         if (!mounted) return;
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('שגיאת הרשמה: ${e.toString()}'),
@@ -131,7 +127,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    
+
                     const Text(
                       'יצירת חשבון חדש',
                       style: TextStyle(
@@ -141,12 +137,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
-                    
+
                     // User type selector
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Teacher Button
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () {
@@ -158,15 +153,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               backgroundColor: _isTeacher
                                   ? AppColors.primary
                                   : Colors.grey.shade300,
-                              foregroundColor: _isTeacher
-                                  ? Colors.white
-                                  : Colors.black,
+                              foregroundColor:
+                                  _isTeacher ? Colors.white : Colors.black,
                             ),
                             child: const Text(AppStrings.teacherLogin),
                           ),
                         ),
                         const SizedBox(width: 10),
-                        // Student Button
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () {
@@ -178,9 +171,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               backgroundColor: !_isTeacher
                                   ? AppColors.primary
                                   : Colors.grey.shade300,
-                              foregroundColor: !_isTeacher
-                                  ? Colors.white
-                                  : Colors.black,
+                              foregroundColor:
+                                  !_isTeacher ? Colors.white : Colors.black,
                             ),
                             child: const Text(AppStrings.studentLogin),
                           ),
@@ -188,7 +180,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    
+
                     // Username Field
                     TextFormField(
                       controller: _usernameController,
@@ -207,7 +199,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       },
                     ),
                     const SizedBox(height: 15),
-                    
+
                     // Email Field
                     TextFormField(
                       controller: _emailController,
@@ -230,7 +222,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       },
                     ),
                     const SizedBox(height: 15),
-                    
+
                     // Password Field
                     TextFormField(
                       controller: _passwordController,
@@ -253,7 +245,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       },
                     ),
                     const SizedBox(height: 15),
-                    
+
                     // Confirm Password Field
                     TextFormField(
                       controller: _confirmPasswordController,
@@ -273,14 +265,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       },
                     ),
                     const SizedBox(height: 25),
-                    
+
                     // Register Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _register,
                         child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
+                            ? const CircularProgressIndicator(
+                                color: Colors.white)
                             : const Text(
                                 AppStrings.registerButtonText,
                                 style: TextStyle(fontSize: 16),
@@ -288,7 +281,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       ),
                     ),
                     const SizedBox(height: 15),
-                    
+
                     // Login Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,

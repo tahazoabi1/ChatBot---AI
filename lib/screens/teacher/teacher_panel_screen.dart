@@ -1,13 +1,13 @@
 // lib/screens/teacher/teacher_panel_screen.dart
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/app_strings.dart';
 import '../../models/student.dart';
 import 'student_list_screen.dart';
 import 'account_settings_screen.dart';
 import '../../widgets/notification_widget.dart';
-import 'package:provider/provider.dart';
-import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
 
 class TeacherPanelScreen extends StatefulWidget {
@@ -21,53 +21,57 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
   int _pendingNotifications = 2; // Mock data
   List<Student> _recentStudents = [];
   bool _isLoading = true;
+  String _username = 'המורה';
 
   @override
   void initState() {
     super.initState();
-    // Use addPostFrameCallback to ensure context is ready
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
+      _loadUsername();
     });
   }
 
+  Future<void> _loadUsername() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (doc.exists && mounted) {
+        setState(() {
+          _username = doc['username'] ?? 'המורה';
+        });
+      }
+    }
+  }
+
   Future<void> _loadData() async {
-    // Simulate data loading
     await Future.delayed(const Duration(milliseconds: 800));
-    
-    // Safely get data from service with null check
     if (mounted) {
       try {
-        final databaseService = Provider.of<DatabaseService>(context, listen: false);
+        // You may want to replace with actual Firestore fetching here:
+        final databaseService = DatabaseService();
         List<Student> allStudents = databaseService.getAllStudents();
-        
-        // Sort by most recent activity (mock for now)
+
         allStudents.sort((a, b) => b.grade.compareTo(a.grade));
-        
-        if (mounted) {
-          setState(() {
-            _recentStudents = allStudents.take(3).toList();
-            _isLoading = false;
-          });
-        }
+        setState(() {
+          _recentStudents = allStudents.take(3).toList();
+          _isLoading = false;
+        });
       } catch (e) {
         debugPrint('Error loading data: $e');
-        if (mounted) {
-          setState(() {
-            _recentStudents = [];
-            _isLoading = false;
-          });
-        }
+        setState(() {
+          _recentStudents = [];
+          _isLoading = false;
+        });
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get current user info
-    final authService = Provider.of<AuthService>(context);
-    final username = authService.username.isNotEmpty ? authService.username : 'המורה עדי';
-    
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -77,7 +81,8 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                 children: [
                   // Header
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 15),
                     color: AppColors.primary,
                     child: Row(
                       children: [
@@ -86,7 +91,8 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const AccountSettingsScreen(),
+                                builder: (context) =>
+                                    const AccountSettingsScreen(),
                               ),
                             );
                           },
@@ -114,7 +120,7 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                                 ),
                               ),
                               Text(
-                                'שלום, $username!',
+                                'שלום, $_username!',
                                 style: const TextStyle(
                                   fontSize: 16,
                                   color: Colors.white,
@@ -127,9 +133,9 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                         Stack(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.notifications, color: Colors.white, size: 28),
+                              icon: const Icon(Icons.notifications,
+                                  color: Colors.white, size: 28),
                               onPressed: () {
-                                // Show notifications
                                 _showNotificationsDialog(context);
                               },
                             ),
@@ -163,10 +169,10 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                       ],
                     ),
                   ),
-                  
                   // Dashboard summary
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 15, horizontal: 20),
                     color: AppColors.primary.withOpacity(0.8),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -177,7 +183,6 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                       ],
                     ),
                   ),
-                  
                   // Main Content
                   Expanded(
                     child: Padding(
@@ -191,31 +196,24 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                               crossAxisSpacing: 15,
                               mainAxisSpacing: 15,
                               children: [
-                                // System Settings Button
                                 _buildMenuCard(
                                   context,
                                   title: 'הגדרות מערכת',
                                   subtitle: 'צליל, תצוגה, הגדרות צ׳אטבוט',
                                   icon: Icons.settings,
                                   onTap: () {
-                                    // Navigate to system settings
                                     _showSystemSettingsDialog(context);
                                   },
                                 ),
-                                
-                                // Archive Button
                                 _buildMenuCard(
                                   context,
                                   title: 'ארכיון',
                                   subtitle: 'תיעוד שיחות, ניתוח נתונים',
                                   icon: Icons.archive,
                                   onTap: () {
-                                    // Navigate to archive
                                     _showArchiveOptions(context);
                                   },
                                 ),
-                                
-                                // Account Settings Button
                                 _buildMenuCard(
                                   context,
                                   title: 'הגדרות חשבון',
@@ -225,14 +223,13 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const AccountSettingsScreen(),
+                                        builder: (context) =>
+                                            const AccountSettingsScreen(),
                                       ),
                                     );
                                   },
                                   isLocked: false,
                                 ),
-                                
-                                // Student Tracking Button
                                 _buildMenuCard(
                                   context,
                                   title: 'מעקב תלמידים',
@@ -242,7 +239,8 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const StudentListScreen(),
+                                        builder: (context) =>
+                                            const StudentListScreen(),
                                       ),
                                     );
                                   },
@@ -250,14 +248,13 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                               ],
                             ),
                           ),
-                          
-                          // Recent Activity Section
                           if (_recentStudents.isNotEmpty) ...[
                             const SizedBox(height: 20),
                             Align(
                               alignment: Alignment.centerRight,
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text(
                                     'פעילות אחרונה',
@@ -271,7 +268,8 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => const StudentListScreen(),
+                                          builder: (context) =>
+                                              const StudentListScreen(),
                                         ),
                                       );
                                     },
@@ -288,59 +286,48 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                                 itemCount: _recentStudents.length,
                                 itemBuilder: (context, index) {
                                   final student = _recentStudents[index];
-                                  return _buildRecentStudentCard(context, student);
+                                  return _buildRecentStudentCard(
+                                      context, student);
                                 },
                               ),
                             ),
                           ],
-                          
-                          // Notifications Area
                           const SizedBox(height: 20),
                           const NotificationWidget(),
                         ],
                       ),
                     ),
                   ),
-                  
                   // Bottom Navigation
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
                     color: AppColors.primary,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Grid Icon
                         IconButton(
-                          icon: const Icon(Icons.grid_view, color: Colors.white),
-                          onPressed: () {
-                            // Already on the grid view
-                          },
+                          icon:
+                              const Icon(Icons.grid_view, color: Colors.white),
+                          onPressed: () {},
                         ),
-                        
-                        // Add Student Button
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(30),
                           ),
                           child: IconButton(
-                            icon: const Icon(
-                              Icons.add,
-                              color: AppColors.primary,
-                              size: 30,
-                            ),
+                            icon: const Icon(Icons.add,
+                                color: AppColors.primary, size: 30),
                             onPressed: () {
-                              // Navigate to add student screen
                               _showAddStudentDialog(context);
                             },
                           ),
                         ),
-                        
-                        // Bot Icon
                         IconButton(
-                          icon: const Icon(Icons.smart_toy, color: Colors.white),
+                          icon:
+                              const Icon(Icons.smart_toy, color: Colors.white),
                           onPressed: () {
-                            // Navigate to LearnoBot interface
                             _showBotTutorialDialog(context);
                           },
                         ),
@@ -352,6 +339,8 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
       ),
     );
   }
+
+  // ============ Helper Widgets and Methods ==============
 
   Widget _buildSummaryItem(String label, String value) {
     return Column(
@@ -459,7 +448,6 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
   Widget _buildRecentStudentCard(BuildContext context, Student student) {
     return GestureDetector(
       onTap: () {
-        // Navigate to student profile
         Navigator.pushNamed(
           context,
           '/student_profile',
@@ -471,7 +459,6 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
         margin: const EdgeInsets.only(left: 10),
         child: Column(
           children: [
-            // Student Avatar
             CircleAvatar(
               radius: 30,
               backgroundColor: AppColors.primaryLight,
@@ -485,7 +472,6 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            // Student Name
             Text(
               student.name,
               textAlign: TextAlign.center,
@@ -494,7 +480,6 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            // Student Grade
             Text(
               student.grade,
               style: TextStyle(
@@ -548,9 +533,7 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
               title: const Text('שפה'),
               subtitle: const Text('עברית'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: () {
-                // Show language options
-              },
+              onTap: () {},
             ),
           ],
         ),
@@ -624,7 +607,6 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
           SimpleDialogOption(
             onPressed: () {
               Navigator.pop(context);
-              // Navigate to conversation logs
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('תיעוד שיחות בקרוב!')),
               );
@@ -637,7 +619,6 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
           SimpleDialogOption(
             onPressed: () {
               Navigator.pop(context);
-              // Navigate to student progress
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('התקדמות תלמידים בקרוב!')),
               );
@@ -650,7 +631,6 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
           SimpleDialogOption(
             onPressed: () {
               Navigator.pop(context);
-              // Navigate to data analysis
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('ניתוח נתונים בקרוב!')),
               );
@@ -663,7 +643,6 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
           SimpleDialogOption(
             onPressed: () {
               Navigator.pop(context);
-              // Navigate to teacher reports
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('דוחות בקרוב!')),
               );
@@ -688,38 +667,25 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
           child: ListView(
             shrinkWrap: true,
             children: [
+              _buildNotificationItem('התלמיד חן לוי מבקש עזרה', '8:05 אפר׳ 30',
+                  isNew: true),
               _buildNotificationItem(
-                'התלמיד חן לוי מבקש עזרה',
-                '8:05 אפר׳ 30',
-                isNew: true,
-              ),
+                  'ההודעה שלך נשלחה לתלמיד רון שני', '10:30 אפר׳ 29',
+                  isNew: true),
+              _buildNotificationItem('נוספו 3 תלמידים חדשים', '15:42 אפר׳ 28',
+                  isNew: false),
               _buildNotificationItem(
-                'ההודעה שלך נשלחה לתלמיד רון שני',
-                '10:30 אפר׳ 29',
-                isNew: true,
-              ),
+                  'התלמידה נילי נעים ביקשה עזרה', '14:15 אפר׳ 27',
+                  isNew: false),
               _buildNotificationItem(
-                'נוספו 3 תלמידים חדשים',
-                '15:42 אפר׳ 28',
-                isNew: false,
-              ),
-              _buildNotificationItem(
-                'התלמידה נילי נעים ביקשה עזרה',
-                '14:15 אפר׳ 27',
-                isNew: false,
-              ),
-              _buildNotificationItem(
-                'התלמיד נועם אופלי השלים משימה',
-                '9:20 אפר׳ 26',
-                isNew: false,
-              ),
+                  'התלמיד נועם אופלי השלים משימה', '9:20 אפר׳ 26',
+                  isNew: false),
             ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () {
-              // Mark all as read
               setState(() {
                 _pendingNotifications = 0;
               });
@@ -736,7 +702,8 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
     );
   }
 
-  Widget _buildNotificationItem(String message, String time, {bool isNew = false}) {
+  Widget _buildNotificationItem(String message, String time,
+      {bool isNew = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
@@ -804,7 +771,7 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
     final TextEditingController gradeController = TextEditingController();
     final TextEditingController descriptionController = TextEditingController();
     int selectedDifficulty = 3;
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -827,8 +794,6 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
-                  
-                  // Name Field
                   TextField(
                     controller: nameController,
                     textDirection: TextDirection.rtl,
@@ -836,14 +801,12 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                       labelText: 'שם תלמיד',
                       border: OutlineInputBorder(),
                       contentPadding: EdgeInsets.symmetric(
-                        horizontal: 15, 
+                        horizontal: 15,
                         vertical: 10,
                       ),
                     ),
                   ),
                   const SizedBox(height: 15),
-                  
-                  // Grade Field
                   TextField(
                     controller: gradeController,
                     textDirection: TextDirection.rtl,
@@ -851,14 +814,12 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                       labelText: 'כיתה',
                       border: OutlineInputBorder(),
                       contentPadding: EdgeInsets.symmetric(
-                        horizontal: 15, 
+                        horizontal: 15,
                         vertical: 10,
                       ),
                     ),
                   ),
                   const SizedBox(height: 15),
-                  
-                  // Difficulty Level Selector
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -909,8 +870,6 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                     ],
                   ),
                   const SizedBox(height: 15),
-                  
-                  // Description Field
                   TextField(
                     controller: descriptionController,
                     textDirection: TextDirection.rtl,
@@ -919,14 +878,12 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                       labelText: 'תיאור קשיי התלמיד',
                       border: OutlineInputBorder(),
                       contentPadding: EdgeInsets.symmetric(
-                        horizontal: 15, 
+                        horizontal: 15,
                         vertical: 10,
                       ),
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
-                  // Action Buttons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -936,7 +893,7 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                       ),
                       ElevatedButton(
                         onPressed: () async {
-                          if (nameController.text.isEmpty || 
+                          if (nameController.text.isEmpty ||
                               gradeController.text.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -945,30 +902,30 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                             );
                             return;
                           }
-                          
+
                           final newStudent = Student(
-                            id: DateTime.now().millisecondsSinceEpoch.toString(),
+                            id: DateTime.now()
+                                .millisecondsSinceEpoch
+                                .toString(),
                             name: nameController.text,
                             grade: gradeController.text,
                             difficultyLevel: selectedDifficulty,
                             description: descriptionController.text,
                           );
-                          
+
                           // Add student to database
-                          final databaseService = Provider.of<DatabaseService>(
-                            context, 
-                            listen: false,
-                          );
+                          final databaseService = DatabaseService();
                           await databaseService.addStudent(newStudent);
-                          
+
                           // Refresh recent students
                           _loadData();
-                          
+
                           Navigator.pop(context);
-                          
+
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('התלמיד ${newStudent.name} נוסף בהצלחה'),
+                              content:
+                                  Text('התלמיד ${newStudent.name} נוסף בהצלחה'),
                               backgroundColor: Colors.green,
                             ),
                           );
@@ -1024,7 +981,8 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
               _buildTutorialItem(
                 icon: Icons.psychology,
                 title: 'סיוע מותאם אישית',
-                description: 'עזרה בהבנת הוראות והסבר משימות בהתאם לרמת הקושי של התלמיד',
+                description:
+                    'עזרה בהבנת הוראות והסבר משימות בהתאם לרמת הקושי של התלמיד',
               ),
               const SizedBox(height: 10),
               _buildTutorialItem(

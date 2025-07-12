@@ -1,17 +1,16 @@
 // lib/screens/student/student_chat_screen.dart
 import 'package:flutter/material.dart';
-//import 'package:flutter/services.dart';
 import 'dart:io';
 import '../../constants/app_colors.dart';
 import '../../constants/app_strings.dart';
 import '../../models/chat_message.dart';
 import '../../widgets/chat_bubble.dart';
-//import '../../widgets/task_capture_widget.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../services/local_llm_service.dart';
 
 class StudentChatScreen extends StatefulWidget {
   final String initialMode;
-  
+
   const StudentChatScreen({
     Key? key,
     this.initialMode = 'practice',
@@ -25,35 +24,38 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
-  bool _isRecording = false;
-  String _currentMode = 'practice'; // Default mode
+  String _currentMode = 'practice';
   File? _capturedImage;
   bool _showAssistanceOptions = false;
-  
+  final _llm = LocalLlmService();
+  bool _isBotTyping = false;
+
+  // Track the latest user question/task (for assist buttons)
+  String? _lastTaskText;
+
+  // Track last satisfaction for adaptive logic
+  int? _lastSatisfaction;
+
   @override
   void initState() {
     super.initState();
     _currentMode = widget.initialMode;
-    
-    // Add welcome message
     _addBotMessage('היי! איך אני יכול לעזור לך היום?');
-    
-    // If initial mode is capture, open camera
     if (_currentMode == 'capture') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _captureTask();
       });
     }
   }
-  
+
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
-  
-  void _addBotMessage(String content) {
+
+  void _addBotMessage(String content, {Map<String, dynamic>? metadata}) {
     setState(() {
       _messages.add(
         ChatMessage(
@@ -61,12 +63,13 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
           content: content,
           timestamp: DateTime.now(),
           sender: SenderType.bot,
+          metadata: metadata,
         ),
       );
     });
     _scrollToBottom();
   }
-  
+
   void _addUserMessage(String content, {MessageType type = MessageType.text}) {
     setState(() {
       _messages.add(
@@ -81,7 +84,7 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
     });
     _scrollToBottom();
   }
-  
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -93,128 +96,89 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
       }
     });
   }
-  
+
   void _sendMessage() {
-    if (_messageController.text.trim().isNotEmpty) {
+    if (_messageController.text.trim().isNotEmpty && !_isBotTyping) {
       final message = _messageController.text.trim();
+      _lastTaskText = message; // Track the latest user question
       _addUserMessage(message);
       _messageController.clear();
-      
-      // Simulate AI response
       _processBotResponse(message);
     }
   }
-  
-  void _processBotResponse(String userMessage) {
-    // Show typing indicator
+
+  Future<void> _processBotResponse(String userMessage) async {
+    // Adapt next response based on last satisfaction
+    String contextInstruction = '';
+    if (_lastSatisfaction != null) {
+      if (_lastSatisfaction! <= 2) {
+        contextInstruction =
+            'The previous answer was not helpful (user rated it low). Please try a different approach, use simpler or more engaging language.';
+      } else if (_lastSatisfaction! >= 5) {
+        contextInstruction =
+            'The previous answer was rated highly. Continue responding in the same style as before.';
+      }
+      _lastSatisfaction = null; // Use only once!
+    }
+    final adaptedQuestion = contextInstruction.isNotEmpty
+        ? '$contextInstruction\n$userMessage'
+        : userMessage;
+
     setState(() {
-      _messages.add(
-        ChatMessage(
-          id: 'typing-${DateTime.now().millisecondsSinceEpoch}',
-          content: 'typing',
-          timestamp: DateTime.now(),
-          sender: SenderType.bot,
-          type: MessageType.systemMessage,
-        ),
-      );
+      _isBotTyping = true;
+      _messages.add(ChatMessage(
+        id: 'typing',
+        content: '...',
+        timestamp: DateTime.now(),
+        sender: SenderType.bot,
+        type: MessageType.systemMessage,
+      ));
     });
     _scrollToBottom();
-    
-    // Simulate processing delay
-    Future.delayed(const Duration(seconds: 1), () {
-      // Remove typing indicator
+
+    try {
+      final reply = await _llm.ask(
+        question: adaptedQuestion,
+        examMode: _currentMode == 'test',
+      );
+
       setState(() {
-        _messages.removeWhere((message) => 
-          message.type == MessageType.systemMessage && 
-          message.content == 'typing'
-        );
+        _messages.removeWhere((m) => m.id == 'typing');
+        _addBotMessage(reply);
+        _isBotTyping = false;
       });
-      
-      // Add response based on user message
-      String response;
-      if (userMessage.contains('?') || userMessage.toLowerCase().contains('שאלה') || 
-          userMessage.toLowerCase().contains('עזרה')) {
-        response = 'אני אשמח לעזור לך. האם תוכל להסביר יותר על המשימה?';
-        setState(() {
-          _showAssistanceOptions = true;
-        });
-      } else if (userMessage.toLowerCase().contains('תודה') || 
-                userMessage.toLowerCase().contains('הבנתי')) {
-        response = 'בשמחה! האם יש משהו נוסף שאוכל לעזור בו?';
-        setState(() {
-          _showAssistanceOptions = false;
-        });
-      } else {
-        response = 'הבנתי את השאלה שלך. בוא ננסה להבין את המשימה ביחד. האם תוכל לספר לי יותר על מה שאתה צריך לעשות?';
-        setState(() {
-          _showAssistanceOptions = true;
-        });
-      }
-      
-      _addBotMessage(response);
-      
-      // Ask for feedback after bot response
-      Future.delayed(const Duration(seconds: 1), () {
-        _showFeedbackDialog();
+    } catch (e) {
+      setState(() {
+        _messages.removeWhere((m) => m.id == 'typing');
+        _addBotMessage('⚠️ שגיאה: $e');
+        _isBotTyping = false;
       });
-    });
-  }
-  
-  void _handleAssistanceOption(String option) {
-    late String userMessage;
-    late String botResponse;
-    
-    switch (option) {
-      case 'breakdown':
-        userMessage = 'אנא פרק את המשימה לשלבים';
-        botResponse = 'בוודאי! הנה המשימה מפורקת לשלבים קטנים:\n\n1. קרא את המשימה בעיון\n2. הבן מה נדרש ממך\n3. תכנן את השלבים לפתרון\n4. פתור כל שלב בנפרד\n5. בדוק את עבודתך';
-        break;
-      case 'demonstrate':
-        userMessage = 'תן לי דוגמה בבקשה';
-        botResponse = 'הנה דוגמה לפתרון המשימה: [כאן תופיע דוגמה מפורטת של המשימה הספציפית]';
-        break;
-      case 'explain':
-        userMessage = 'אנא הסבר את המשימה';
-        botResponse = 'בשמחה! המשימה מבקשת ממך לבצע את הפעולות הבאות: [כאן יופיע הסבר מפורט של המשימה הספציפית]';
-        break;
     }
-    
-    _addUserMessage(userMessage);
-    
-    // Simulate AI processing
-    Future.delayed(const Duration(milliseconds: 500), () {
-      _addBotMessage(botResponse);
-      
-      // Ask for feedback
-      Future.delayed(const Duration(seconds: 1), () {
-        _showFeedbackDialog();
-      });
-    });
   }
-  
+
   Future<void> _captureTask() async {
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(source: ImageSource.camera);
-      
+
       if (image != null) {
         setState(() {
           _capturedImage = File(image.path);
         });
-        
-        // Add task image to chat
+
         _addUserMessage(
           'תמונת משימה',
           type: MessageType.taskCapture,
         );
-        
-        // Simulate text extraction
+
         Future.delayed(const Duration(seconds: 1), () {
           _addBotMessage('אני מעבד את המשימה שצילמת...');
-          
           Future.delayed(const Duration(seconds: 2), () {
-            _addBotMessage('זיהיתי את המשימה הבאה: \n\nכתוב חיבור בנושא "לאהוב את הטבע שמסביבנו" בהיקף של 30-40 שורות. לאחר מכן ענה על שאלות הבנה הקשורות לנושא.');
-            
+            // Simulate extracting text from the image (replace with real OCR later)
+            final extractedText =
+                'כתוב חיבור בנושא "לאהוב את הטבע שמסביבנו" בהיקף של 30-40 שורות. לאחר מכן ענה על שאלות הבנה הקשורות לנושא.';
+            _lastTaskText = extractedText;
+            _addBotMessage('זיהיתי את המשימה הבאה: \n\n$extractedText');
             Future.delayed(const Duration(seconds: 1), () {
               setState(() {
                 _showAssistanceOptions = true;
@@ -229,66 +193,165 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
       );
     }
   }
-  
-  void _showFeedbackDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('משוב'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(AppStrings.satisfaction),
-            const SizedBox(height: 15),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildFeedbackOption(context, 1, AppStrings.poor),
-                _buildFeedbackOption(context, 2, ''),
-                _buildFeedbackOption(context, 3, AppStrings.average),
-                _buildFeedbackOption(context, 4, ''),
-                _buildFeedbackOption(context, 5, AppStrings.excellent),
-              ],
+
+  // === SATISFACTION BAR LOGIC ===
+  Widget _buildSatisfactionBar(ChatMessage message, int msgIdx) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(5, (i) {
+          final starValue = i + 1;
+          return IconButton(
+            icon: Icon(
+              Icons.star,
+              color: Colors.amber,
+              size: 28,
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('סגור'),
+            onPressed: () => _setSatisfaction(msgIdx, starValue),
+          );
+        }),
+      ),
+    );
+  }
+
+  void _setSatisfaction(int botMsgIndex, int value) {
+    setState(() {
+      final msg = _messages[botMsgIndex];
+      final newMetadata = Map<String, dynamic>.from(msg.metadata ?? {});
+      newMetadata['satisfaction'] = value;
+      _messages[botMsgIndex] = ChatMessage(
+        id: msg.id,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        sender: msg.sender,
+        type: msg.type,
+        metadata: newMetadata,
+      );
+      _lastSatisfaction = value;
+    });
+  }
+  // === END SATISFACTION BAR LOGIC ===
+
+  // === MODE SELECTOR BAR ===
+  Widget _buildModeSelector() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      color: Colors.white,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Practice Mode Button
+          GestureDetector(
+            onTap: () {
+              if (_currentMode != 'practice') {
+                setState(() {
+                  _currentMode = 'practice';
+                });
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              decoration: BoxDecoration(
+                color: _currentMode == 'practice'
+                    ? AppColors.primary
+                    : Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: _currentMode == 'practice'
+                      ? AppColors.primary
+                      : Colors.grey.shade400,
+                  width: 2,
+                ),
+              ),
+              child: Text(
+                'מצב תרגול',
+                style: TextStyle(
+                  color: _currentMode == 'practice'
+                      ? Colors.white
+                      : Colors.black54,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Test Mode Button (Locked)
+          GestureDetector(
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('מצב מבחן'),
+                  content: const Text('מצב מבחן בפיתוח כעת ויהיה זמין בקרוב.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('סגור'),
+                    ),
+                  ],
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.grey.shade400, width: 2),
+              ),
+              child: Row(
+                children: const [
+                  Icon(Icons.lock, size: 18, color: Colors.grey),
+                  SizedBox(width: 4),
+                  Text(
+                    'מצב מבחן',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
   }
-  
-  Widget _buildFeedbackOption(BuildContext context, int rating, String label) {
-    return Column(
-      children: [
-        IconButton(
-          icon: Icon(
-            rating <= 2 ? Icons.sentiment_dissatisfied : 
-            rating == 3 ? Icons.sentiment_neutral : 
-            Icons.sentiment_satisfied,
-            color: rating <= 2 ? Colors.red : 
-                  rating == 3 ? Colors.amber : 
-                  Colors.green,
-            size: 30,
-          ),
-          onPressed: () {
-            // Save feedback
-            print('User rated response: $rating/5');
-            Navigator.pop(context);
-          },
-        ),
-        if (label.isNotEmpty)
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12),
-          ),
-      ],
-    );
+  // === END MODE SELECTOR ===
+
+  // === ASSISTANCE BUTTONS HANDLER ===
+  void _handleAssistButton(String type) {
+    if (_lastTaskText == null || _lastTaskText!.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('אנא כתוב שאלה או העלה משימה לפני השימוש בעזרה')),
+      );
+      return;
+    }
+    String prompt;
+    switch (type) {
+      case 'breakdown':
+        prompt =
+            'Break down the following task into step-by-step instructions in simple language: ${_lastTaskText!}';
+        break;
+      case 'demonstrate':
+        prompt =
+            'Give a concrete worked example that shows how to solve: ${_lastTaskText!}';
+        break;
+      case 'explain':
+        prompt =
+            'Explain the following task in simple words so that a student can understand: ${_lastTaskText!}';
+        break;
+      default:
+        prompt = _lastTaskText!;
+    }
+    _addUserMessage(prompt);
+    _processBotResponse(prompt);
   }
+  // === END ASSISTANCE BUTTONS HANDLER ===
 
   @override
   Widget build(BuildContext context) {
@@ -302,14 +365,13 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
       ),
       body: Column(
         children: [
-          // Cloud-like background
+          _buildModeSelector(),
           Container(
             height: 80,
             width: double.infinity,
             color: AppColors.skyBackground,
             child: Stack(
               children: [
-                // Cloud shapes
                 Positioned(
                   left: 20,
                   top: 10,
@@ -325,17 +387,20 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
                   top: 30,
                   child: _buildCloud(60),
                 ),
-                // Mode indicator
                 Center(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.8),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      _currentMode == 'practice' ? AppStrings.practiceMode :
-                      _currentMode == 'test' ? AppStrings.testMode : 'צילום משימה',
+                      _currentMode == 'practice'
+                          ? AppStrings.practiceMode
+                          : _currentMode == 'test'
+                              ? AppStrings.testMode
+                              : 'צילום משימה',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -347,8 +412,6 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
               ],
             ),
           ),
-          
-          // Chat Messages
           Expanded(
             child: Container(
               decoration: const BoxDecoration(
@@ -367,9 +430,9 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
                   final message = _messages[index];
-                  
+
                   // Typing indicator
-                  if (message.type == MessageType.systemMessage && 
+                  if (message.type == MessageType.systemMessage &&
                       message.content == 'typing') {
                     return Align(
                       alignment: Alignment.centerRight,
@@ -391,8 +454,8 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
                       ),
                     );
                   }
-                  
-                  // Task capture message
+
+                  // Task capture (with image)
                   if (message.type == MessageType.taskCapture) {
                     return Align(
                       alignment: Alignment.centerLeft,
@@ -401,8 +464,8 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
                         children: [
                           ChatBubble(
                             message: message,
-                            showAvatar: index == 0 || 
-                              _messages[index - 1].sender != message.sender,
+                            showAvatar: index == 0 ||
+                                _messages[index - 1].sender != message.sender,
                           ),
                           if (_capturedImage != null) ...[
                             const SizedBox(height: 5),
@@ -424,20 +487,50 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
                       ),
                     );
                   }
-                  
-                  // Regular chat message
-                  return ChatBubble(
-                    message: message,
-                    showAvatar: index == 0 || 
-                      _messages[index - 1].sender != message.sender,
+
+                  // Default: chat bubble + satisfaction logic
+                  return Column(
+                    crossAxisAlignment: message.sender == SenderType.bot
+                        ? CrossAxisAlignment.start
+                        : CrossAxisAlignment.end,
+                    children: [
+                      ChatBubble(
+                        message: message,
+                        showAvatar: index == 0 ||
+                            _messages[index - 1].sender != message.sender,
+                      ),
+                      if (message.sender == SenderType.bot &&
+                          (message.metadata == null ||
+                              !message.metadata!.containsKey('satisfaction')))
+                        _buildSatisfactionBar(message, index),
+                      if (message.sender == SenderType.bot &&
+                          (message.metadata?['satisfaction'] != null))
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text('דירוג: ', style: TextStyle(fontSize: 14)),
+                            ...List.generate(
+                              5,
+                              (i) => Icon(
+                                Icons.star,
+                                color: i <
+                                        (message.metadata!['satisfaction']
+                                            as int)
+                                    ? Colors.amber
+                                    : Colors.grey[400],
+                                size: 20,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
                   );
                 },
               ),
             ),
           ),
-          
-          // Assistance options (Breakdown, Demonstrate, Explain)
-          if (_showAssistanceOptions)
+          if ((_lastTaskText != null && _lastTaskText!.trim().isNotEmpty) &&
+              _currentMode == 'practice')
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               color: Colors.white,
@@ -447,36 +540,31 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
                   _buildAssistanceButton(
                     'פירוק לשלבים',
                     Icons.format_list_numbered,
-                    () => _handleAssistanceOption('breakdown'),
+                    () => _handleAssistButton('breakdown'),
                   ),
                   _buildAssistanceButton(
                     'הדגמה',
                     Icons.play_circle_outline,
-                    () => _handleAssistanceOption('demonstrate'),
+                    () => _handleAssistButton('demonstrate'),
                   ),
                   _buildAssistanceButton(
                     'הסבר',
                     Icons.lightbulb_outline,
-                    () => _handleAssistanceOption('explain'),
+                    () => _handleAssistButton('explain'),
                   ),
                 ],
               ),
             ),
-          
-          // Message Input
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             color: Colors.white,
             child: Row(
               children: [
-                // Navigation button (back)
                 IconButton(
                   icon: const Icon(Icons.keyboard_arrow_left),
                   onPressed: () {},
                   color: AppColors.primary,
                 ),
-                
-                // Text input
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 15),
@@ -496,44 +584,29 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
                     ),
                   ),
                 ),
-                
-                // Send button
                 IconButton(
-                  icon: const Icon(Icons.sentiment_satisfied_alt),
-                  onPressed: () {},
+                  icon: const Icon(Icons.send),
+                  onPressed: _isBotTyping ? null : _sendMessage,
                   color: AppColors.primary,
                 ),
               ],
             ),
           ),
-          
-          // Bottom actions
           Container(
             padding: const EdgeInsets.symmetric(vertical: 5),
             color: AppColors.primary,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                // Voice record button
                 IconButton(
                   icon: Icon(
-                    _isRecording ? Icons.stop : Icons.mic,
+                    Icons.mic,
                     color: Colors.white,
                   ),
                   onPressed: () {
-                    setState(() {
-                      _isRecording = !_isRecording;
-                    });
-                    
-                    if (!_isRecording) {
-                      // Simulate voice recognition
-                      _addUserMessage('הודעה קולית');
-                      _processBotResponse('האם אתה יכול לעזור לי עם המשימה?');
-                    }
+                    // Do nothing or implement voice later
                   },
                 ),
-                
-                // Camera button
                 IconButton(
                   icon: const Icon(
                     Icons.camera_alt,
@@ -541,8 +614,6 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
                   ),
                   onPressed: _captureTask,
                 ),
-                
-                // Call teacher button
                 IconButton(
                   icon: const Icon(
                     Icons.school,
@@ -564,7 +635,7 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
       ),
     );
   }
-  
+
   Widget _buildCloud(double size) {
     return Container(
       width: size,
@@ -575,8 +646,9 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
       ),
     );
   }
-  
-  Widget _buildAssistanceButton(String label, IconData icon, VoidCallback onTap) {
+
+  Widget _buildAssistanceButton(
+      String label, IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),

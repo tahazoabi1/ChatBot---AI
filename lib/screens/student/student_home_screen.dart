@@ -56,7 +56,7 @@ class StudentHomeScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Main Content
             Expanded(
               child: Padding(
@@ -88,7 +88,7 @@ class StudentHomeScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    
+
                     // Start Conversation Button
                     ElevatedButton.icon(
                       onPressed: () {
@@ -101,14 +101,14 @@ class StudentHomeScreen extends StatelessWidget {
                       ),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 30, 
+                          horizontal: 30,
                           vertical: 15,
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Upload Task Button
                     OutlinedButton.icon(
                       onPressed: () {
@@ -128,7 +128,7 @@ class StudentHomeScreen extends StatelessWidget {
                       ),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 30, 
+                          horizontal: 30,
                           vertical: 12,
                         ),
                         side: const BorderSide(color: AppColors.primary),
@@ -138,7 +138,7 @@ class StudentHomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             // Bottom Info
             Container(
               padding: const EdgeInsets.all(15),
@@ -156,7 +156,7 @@ class StudentHomeScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   void _showModeSelectionDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -178,7 +178,7 @@ class StudentHomeScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
-              
+
               // Practice Mode Button
               _buildModeButton(
                 context,
@@ -196,30 +196,36 @@ class StudentHomeScreen extends StatelessWidget {
                   );
                 },
               ),
-              
+
               const SizedBox(height: 15),
-              
-              // Test Mode Button
+
+              // Test Mode Button (locked)
               _buildModeButton(
                 context,
                 title: AppStrings.testMode,
                 icon: Icons.quiz,
                 onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const StudentChatScreen(
-                        initialMode: 'test',
-                      ),
+                  // Just show dialog, do NOT navigate to chat
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('מצב מבחן'),
+                      content:
+                          const Text('מצב מבחן בפיתוח כעת ויהיה זמין בקרוב.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('סגור'),
+                        ),
+                      ],
                     ),
                   );
                 },
                 isLocked: true,
               ),
-              
+
               const SizedBox(height: 20),
-              
+
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
@@ -232,7 +238,7 @@ class StudentHomeScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildModeButton(
     BuildContext context, {
     required String title,
@@ -241,7 +247,9 @@ class StudentHomeScreen extends StatelessWidget {
     bool isLocked = false,
   }) {
     return Material(
-      color: isLocked ? Colors.grey.shade200 : AppColors.primaryLight.withOpacity(0.2),
+      color: isLocked
+          ? Colors.grey.shade200
+          : AppColors.primaryLight.withOpacity(0.2),
       borderRadius: BorderRadius.circular(15),
       child: InkWell(
         onTap: isLocked ? null : onTap,
