@@ -43,3 +43,24 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# .gitignore
+# Ignore all model files and data
+bot/*.gguf
+bot/*.bin
+bot/*.pth
+bot/models/
+bot/data/
+*.log
+*.tmp
+
+
+# LLM models (never track these!)
+llm_models/
+*.gguf
+*.bin
+
+# Build outputs (from llama.cpp etc)
+llama.cpp/build/
+llama.cpp/bin/
+*.exe
