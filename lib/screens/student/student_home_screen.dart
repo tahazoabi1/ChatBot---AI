@@ -238,26 +238,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
               const SizedBox(height: 15),
 
-              // Camera/Photo Mode Button
-              _buildModeButton(
-                context,
-                title: AppStrings.uploadTask,
-                icon: Icons.camera_alt,
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const StudentChatScreen(
-                        initialMode: 'capture',
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 15),
-
               // Test Mode Button (locked)
               _buildModeButton(
                 context,
