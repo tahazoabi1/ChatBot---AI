@@ -41,11 +41,6 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
     super.initState();
     _currentMode = widget.initialMode;
     _addBotMessage('היי! איך אני יכול לעזור לך היום?');
-    if (_currentMode == 'capture') {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _captureTask();
-      });
-    }
   }
 
   @override
@@ -398,9 +393,7 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
                     child: Text(
                       _currentMode == 'practice'
                           ? AppStrings.practiceMode
-                          : _currentMode == 'test'
-                              ? AppStrings.testMode
-                              : 'צילום משימה',
+                          : AppStrings.testMode,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
