@@ -1,12 +1,37 @@
 // lib/screens/student/student_home_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/app_strings.dart';
-//import '../../widgets/notification_widget.dart';
+import '../../services/auth_service.dart';
+import '../auth/welcome_screen.dart';
 import 'student_chat_screen.dart';
 
-class StudentHomeScreen extends StatelessWidget {
+class StudentHomeScreen extends StatefulWidget {
   const StudentHomeScreen({Key? key}) : super(key: key);
+
+  @override
+  State<StudentHomeScreen> createState() => _StudentHomeScreenState();
+}
+
+class _StudentHomeScreenState extends State<StudentHomeScreen> {
+  String _username = 'תלמיד';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsername();
+  }
+
+  Future<void> _loadUsername() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final username = await authService.getCurrentUserName();
+    if (mounted && username != null) {
+      setState(() {
+        _username = username;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,9 +44,9 @@ class StudentHomeScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
               color: AppColors.primary,
-              child: const Row(
+              child: Row(
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     backgroundColor: Colors.white,
                     radius: 25,
                     child: Icon(
@@ -30,12 +55,12 @@ class StudentHomeScreen extends StatelessWidget {
                       size: 30,
                     ),
                   ),
-                  SizedBox(width: 15),
+                  const SizedBox(width: 15),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'מסך ראשי',
                           style: TextStyle(
                             fontSize: 22,
@@ -44,14 +69,23 @@ class StudentHomeScreen extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'שלום, נועם! מה ברצונך לשאול?',
-                          style: TextStyle(
+                          'שלום, $_username! מה ברצונך לשאול?',
+                          style: const TextStyle(
                             fontSize: 16,
                             color: Colors.white,
                           ),
                         ),
                       ],
                     ),
+                  ),
+                  // Logout button
+                  IconButton(
+                    onPressed: _showLogoutDialog,
+                    icon: const Icon(
+                      Icons.logout,
+                      color: Colors.white,
+                    ),
+                    tooltip: 'התנתק',
                   ),
                 ],
               ),
@@ -106,34 +140,6 @@ class StudentHomeScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 20),
-
-                    // Upload Task Button
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const StudentChatScreen(
-                              initialMode: 'capture',
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.camera_alt_outlined),
-                      label: const Text(
-                        AppStrings.uploadTask,
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 30,
-                          vertical: 12,
-                        ),
-                        side: const BorderSide(color: AppColors.primary),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -153,6 +159,39 @@ class StudentHomeScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('התנתקות'),
+        content: const Text('האם אתה בטוח שברצונך להתנתק?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final authService = Provider.of<AuthService>(context, listen: false);
+              await authService.signOut();
+              // Navigate back to welcome screen
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+                (route) => false,
+              );
+            },
+            child: const Text(
+              'התנתק',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -191,6 +230,26 @@ class StudentHomeScreen extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (context) => const StudentChatScreen(
                         initialMode: 'practice',
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 15),
+
+              // Camera/Photo Mode Button
+              _buildModeButton(
+                context,
+                title: AppStrings.uploadTask,
+                icon: Icons.camera_alt,
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const StudentChatScreen(
+                        initialMode: 'capture',
                       ),
                     ),
                   );
