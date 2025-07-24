@@ -175,7 +175,7 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
           _addBotMessage('אני מעבד את המשימה שצילמת...');
           Future.delayed(const Duration(seconds: 2), () {
             // Simulate extracting text from the image (replace with real OCR later)
-            final extractedText =
+            const extractedText =
                 'כתוב חיבור בנושא "לאהוב את הטבע שמסביבנו" בהיקף של 30-40 שורות. לאחר מכן ענה על שאלות הבנה הקשורות לנושא.';
             _lastTaskText = extractedText;
             _addBotMessage('זיהיתי את המשימה הבאה: \n\n$extractedText');
@@ -203,7 +203,7 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
         children: List.generate(5, (i) {
           final starValue = i + 1;
           return IconButton(
-            icon: Icon(
+            icon: const Icon(
               Icons.star,
               color: Colors.amber,
               size: 28,
@@ -301,8 +301,8 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: Colors.grey.shade400, width: 2),
               ),
-              child: Row(
-                children: const [
+              child: const Row(
+                children: [
                   Icon(Icons.lock, size: 18, color: Colors.grey),
                   SizedBox(width: 4),
                   Text(
@@ -508,7 +508,7 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('דירוג: ', style: TextStyle(fontSize: 14)),
+                            const Text('דירוג: ', style: TextStyle(fontSize: 14)),
                             ...List.generate(
                               5,
                               (i) => Icon(
@@ -599,7 +599,7 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 IconButton(
-                  icon: Icon(
+                  icon: const Icon(
                     Icons.mic,
                     color: Colors.white,
                   ),

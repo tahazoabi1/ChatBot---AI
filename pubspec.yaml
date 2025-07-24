@@ -59,8 +59,11 @@ dev_dependencies:
   excel: ^2.0.5
   path_provider: ^2.1.1
 
-  llama_cpp_bridge:
-    path: ../llama_cpp_bridge
+
+
+  #llama_cpp_bridge:
+    #path: ../llama_cpp_bridge
+    
 
   sqflite: ^2.3.3
   path: any
