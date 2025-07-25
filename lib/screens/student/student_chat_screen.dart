@@ -41,11 +41,6 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
     super.initState();
     _currentMode = widget.initialMode;
     _addBotMessage('היי! איך אני יכול לעזור לך היום?');
-    if (_currentMode == 'capture') {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _captureTask();
-      });
-    }
   }
 
   @override
@@ -156,6 +151,8 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
     }
   }
 
+  // Task capture functionality removed per user request
+  /*
   Future<void> _captureTask() async {
     try {
       final ImagePicker picker = ImagePicker();
@@ -193,6 +190,7 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
       );
     }
   }
+  */
 
   // === SATISFACTION BAR LOGIC ===
   Widget _buildSatisfactionBar(ChatMessage message, int msgIdx) {
@@ -398,9 +396,7 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
                     child: Text(
                       _currentMode == 'practice'
                           ? AppStrings.practiceMode
-                          : _currentMode == 'test'
-                              ? AppStrings.testMode
-                              : 'צילום משימה',
+                          : AppStrings.testMode,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -455,7 +451,8 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
                     );
                   }
 
-                  // Task capture (with image)
+                  // Task capture functionality removed
+                  /*
                   if (message.type == MessageType.taskCapture) {
                     return Align(
                       alignment: Alignment.centerLeft,
@@ -487,6 +484,7 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
                       ),
                     );
                   }
+                  */
 
                   // Default: chat bubble + satisfaction logic
                   return Column(
@@ -606,13 +604,6 @@ class _StudentChatScreenState extends State<StudentChatScreen> {
                   onPressed: () {
                     // Do nothing or implement voice later
                   },
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.camera_alt,
-                    color: Colors.white,
-                  ),
-                  onPressed: _captureTask,
                 ),
                 IconButton(
                   icon: const Icon(
