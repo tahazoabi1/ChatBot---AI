@@ -78,7 +78,6 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        bottom: false,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : Column(
@@ -199,126 +198,140 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                   ),
                   // Main Content
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          // Menu Grid
-                          Expanded(
-                            child: GridView.count(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 15,
-                              mainAxisSpacing: 15,
-                              children: [
-                                _buildMenuCard(
-                                  context,
-                                  title: 'הגדרות מערכת',
-                                  subtitle: 'צליל, תצוגה, הגדרות צ׳אטבוט',
-                                  icon: Icons.settings,
-                                  onTap: () {
-                                    _showSystemSettingsDialog(context);
-                                  },
-                                ),
-                                _buildMenuCard(
-                                  context,
-                                  title: 'ארכיון',
-                                  subtitle: 'תיעוד שיחות, ניתוח נתונים',
-                                  icon: Icons.archive,
-                                  onTap: () {
-                                    _showArchiveOptions(context);
-                                  },
-                                ),
-                                _buildMenuCard(
-                                  context,
-                                  title: 'הגדרות חשבון',
-                                  subtitle: 'עדכן פרטים, שינוי סיסמה',
-                                  icon: Icons.person_outline,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const AccountSettingsScreen(),
-                                      ),
-                                    );
-                                  },
-                                  isLocked: false,
-                                ),
-                                _buildMenuCard(
-                                  context,
-                                  title: 'מעקב תלמידים',
-                                  subtitle: 'כרטיסי תלמידים',
-                                  icon: Icons.people,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const StudentListScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight,
                             ),
-                          ),
-                          if (_recentStudents.isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
                                 children: [
-                                  const Text(
-                                    'פעילות אחרונה',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
+                                  // Menu Grid
+                                  SizedBox(
+                                    height: constraints.maxHeight * 0.5,
+                                    child: GridView.count(
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 15,
+                                      mainAxisSpacing: 15,
+                                      children: [
+                                        _buildMenuCard(
+                                          context,
+                                          title: 'הגדרות מערכת',
+                                          subtitle: 'צליל, תצוגה, הגדרות צ׳אטבוט',
+                                          icon: Icons.settings,
+                                          onTap: () {
+                                            _showSystemSettingsDialog(context);
+                                          },
+                                        ),
+                                        _buildMenuCard(
+                                          context,
+                                          title: 'ארכיון',
+                                          subtitle: 'תיעוד שיחות, ניתוח נתונים',
+                                          icon: Icons.archive,
+                                          onTap: () {
+                                            _showArchiveOptions(context);
+                                          },
+                                        ),
+                                        _buildMenuCard(
+                                          context,
+                                          title: 'הגדרות חשבון',
+                                          subtitle: 'עדכן פרטים, שינוי סיסמה',
+                                          icon: Icons.person_outline,
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    const AccountSettingsScreen(),
+                                              ),
+                                            );
+                                          },
+                                          isLocked: false,
+                                        ),
+                                        _buildMenuCard(
+                                          context,
+                                          title: 'מעקב תלמידים',
+                                          subtitle: 'כרטיסי תלמידים',
+                                          icon: Icons.people,
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    const StudentListScreen(),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const StudentListScreen(),
-                                        ),
-                                      );
-                                    },
-                                    child: const Text('לכל התלמידים'),
+                                  const SizedBox(height: 20),
+                                  if (_recentStudents.isNotEmpty) ...[
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          const Text(
+                                            'פעילות אחרונה',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      const StudentListScreen(),
+                                                ),
+                                              );
+                                            },
+                                            child: const Text('לכל התלמידים'),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    SizedBox(
+                                      height: 100,
+                                      child: ListView.builder(
+                                        scrollDirection: Axis.horizontal,
+                                        itemCount: _recentStudents.length,
+                                        itemBuilder: (context, index) {
+                                          final student = _recentStudents[index];
+                                          return _buildRecentStudentCard(
+                                              context, student);
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                  ],
+                                  // Notifications widget with flexible height
+                                  const Flexible(
+                                    child: NotificationWidget(),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 10),
-                            SizedBox(
-                              height: 100,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: _recentStudents.length,
-                                itemBuilder: (context, index) {
-                                  final student = _recentStudents[index];
-                                  return _buildRecentStudentCard(
-                                      context, student);
-                                },
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 20),
-                          const NotificationWidget(),
-                        ],
-                      ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   // Bottom Navigation
-                  SafeArea(
-                    top: false,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
-                      color: AppColors.primary,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
+                    color: AppColors.primary,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -348,7 +361,6 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                           },
                         ),
                       ],
-                    ),
                     ),
                   ),
                 ],
