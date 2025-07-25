@@ -9,6 +9,9 @@ import 'student_list_screen.dart';
 import 'account_settings_screen.dart';
 import '../../widgets/notification_widget.dart';
 import '../../services/database_service.dart';
+import '../../services/auth_service.dart';
+import '../auth/welcome_screen.dart';
+import 'package:provider/provider.dart';
 
 class TeacherPanelScreen extends StatefulWidget {
   const TeacherPanelScreen({Key? key}) : super(key: key);
@@ -75,6 +78,7 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
+        bottom: false,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : Column(
@@ -165,6 +169,16 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                                 ),
                               ),
                           ],
+                        ),
+                        // Logout button
+                        IconButton(
+                          onPressed: _showLogoutDialog,
+                          icon: const Icon(
+                            Icons.logout,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                          tooltip: 'התנתק',
                         ),
                       ],
                     ),
@@ -299,10 +313,12 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                     ),
                   ),
                   // Bottom Navigation
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 10),
-                    color: AppColors.primary,
+                  SafeArea(
+                    top: false,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      color: AppColors.primary,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -333,6 +349,7 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                         ),
                       ],
                     ),
+                    ),
                   ),
                 ],
               ),
@@ -343,25 +360,30 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
   // ============ Helper Widgets and Methods ==============
 
   Widget _buildSummaryItem(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
+    return Flexible(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
+          const SizedBox(height: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1078,5 +1100,38 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
       default:
         return Colors.grey;
     }
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('התנתקות'),
+        content: const Text('האם אתה בטוח שברצונך להתנתק?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final authService = Provider.of<AuthService>(context, listen: false);
+              await authService.signOut();
+              // Navigate back to welcome screen
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+                (route) => false,
+              );
+            },
+            child: const Text(
+              'התנתק',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
