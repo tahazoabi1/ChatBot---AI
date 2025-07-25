@@ -61,16 +61,29 @@ class LoginScreenState extends State<LoginScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('פרטי התחברות שגויים או תפקיד לא תואם'),
+              content: Text('שם משתמש או סיסמה שגויים'),
               backgroundColor: Colors.red,
             ),
           );
         }
       } catch (e) {
-        // Handle login errors
+        // Handle login errors - show user-friendly message instead of Firebase error
+        String errorMessage = 'שם משתמש או סיסמה שגויים';
+        
+        // Check for specific Firebase errors and provide appropriate messages
+        if (e.toString().contains('user-not-found') || e.toString().contains('wrong-password')) {
+          errorMessage = 'שם משתמש או סיסמה שגויים';
+        } else if (e.toString().contains('too-many-requests')) {
+          errorMessage = 'יותר מדי ניסיונות התחברות. נסה שוב מאוחר יותר';
+        } else if (e.toString().contains('network-request-failed')) {
+          errorMessage = 'בעיית חיבור לאינטרנט. בדוק את החיבור שלך';
+        } else if (e.toString().contains('invalid-email')) {
+          errorMessage = 'כתובת אימייל לא תקינה';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('שגיאת התחברות: ${e.toString()}'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
           ),
         );
