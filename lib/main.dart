@@ -11,8 +11,6 @@ import 'services/auth_service.dart';
 import 'services/chat_service.dart';
 import 'services/database_service.dart';
 import 'utils/router.dart';
-import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
 // Global SharedPreferences instance

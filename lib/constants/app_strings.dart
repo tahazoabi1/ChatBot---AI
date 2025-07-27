@@ -33,7 +33,6 @@ class AppStrings {
   static const String startChat = 'התחל שיחה חדשה';
   static const String practiceMode = 'מצב תרגול';
   static const String testMode = 'מצב מבחן';
-  static const String uploadTask = 'צילום משימה';
   static const String askTeacher = 'קרא למורה';
   static const String talkToMe = 'דבר איתי';
   static const String enterQuestion = 'כתוב לי כאן';

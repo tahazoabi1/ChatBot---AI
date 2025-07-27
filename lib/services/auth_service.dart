@@ -68,6 +68,20 @@ class AuthService {
     return doc.exists ? doc['role'] as String : null;
   }
 
+  // Get current user's data
+  Future<Map<String, dynamic>?> getCurrentUserData() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+    return doc.exists ? doc.data() : null;
+  }
+
+  // Get current user's username
+  Future<String?> getCurrentUserName() async {
+    final userData = await getCurrentUserData();
+    return userData?['username'] as String?;
+  }
+
   // Sign out
   Future<void> signOut() async {
     await _auth.signOut();
