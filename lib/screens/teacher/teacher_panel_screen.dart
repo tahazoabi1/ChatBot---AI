@@ -296,7 +296,7 @@ class _TeacherPanelScreenState extends State<TeacherPanelScreen> {
                               ),
                               const SizedBox(height: 10),
                               SizedBox(
-                                height: 110,
+                                height: 100,
                                 child: ListView.builder(
                                   scrollDirection: Axis.horizontal,
                                   itemCount: _recentStudents.length,
